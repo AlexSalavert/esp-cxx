@@ -71,6 +71,9 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 
+# VS Code settings - ignore in subdirectories, keep in root
+components/**/.vscode/
+
 # User-specific configuration files
 *.user
 *.workspace # General workspace files, can be from various tools
