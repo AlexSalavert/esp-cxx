@@ -19,7 +19,7 @@ SimpleLed::~SimpleLed()
 
 esp_err_t SimpleLed::on()
 {
-    static bool level = m_active_high ? true : false;
+    const bool level = m_active_high ? true : false;
     esp_err_t err = gpio_set_level(m_gpio, level);
     if(err == ESP_OK) m_on = true;
     return err;
@@ -27,7 +27,7 @@ esp_err_t SimpleLed::on()
 
 esp_err_t SimpleLed::off()
 {
-    static bool level = m_active_high ? false : true;
+    const bool level = m_active_high ? false : true;
     esp_err_t err = gpio_set_level(m_gpio, level);
     if(err == ESP_OK) m_on = false;
     return err;

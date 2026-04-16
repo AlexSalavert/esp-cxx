@@ -10,14 +10,34 @@
 
 namespace esp_cxx {
 
+enum class color_led_t : uint8_t {
+    OFF = 0,
+    RED,
+    GREEN,
+    BLUE,
+    YELLOW,
+    CYAN,
+    MAGENTA,
+    WHITE,
+    COUNT
+};
+
 class StatusLed {
 public:
     virtual ~StatusLed() = default;
+
+    // non copyable, non movable
+    StatusLed(const StatusLed&)            = delete;
+    StatusLed& operator=(const StatusLed&) = delete;
+    StatusLed(StatusLed&&)                 = delete;
+    StatusLed& operator=(StatusLed&&)      = delete;
+
     virtual esp_err_t on()  = 0;
     virtual esp_err_t off() = 0;
     virtual esp_err_t toggle()  = 0;
 
 protected:
+    StatusLed() = default;
     bool m_on = false;
 };
 
@@ -33,18 +53,6 @@ public:
 private:
     gpio_num_t m_gpio;
     bool m_active_high;
-};
-
-enum class color_led_t : uint8_t {
-    OFF = 0,
-    RED,
-    GREEN,
-    BLUE,
-    YELLOW,
-    CYAN,
-    MAGENTA,
-    WHITE,
-    COUNT
 };
 
 class Ws2812Led    : public StatusLed {
