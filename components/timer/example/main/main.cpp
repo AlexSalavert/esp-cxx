@@ -9,34 +9,35 @@ extern "C" void app_main()
 {
     int tick_count = 0;
 
-    // ── Ejemplo 1: lambda con captura ────────────────────────────────────────
-    esp_cxx::PeriodicTimer timer_a(1'000'000, [&tick_count]() {
+    // PeriodicTimer -> lambda with capture
+    esp_cxx::PeriodicTimer periodic(1000000, [&tick_count]() {
         tick_count++;
-        ESP_LOGI(TAG, "[timer_a] tick #%d", tick_count);
+        ESP_LOGI(TAG, "[periodic] tick: %d", tick_count);
     });
 
-    // ── Ejemplo 2: lambda sin captura ────────────────────────────────────────
-    esp_cxx::PeriodicTimer timer_b(500'000, []() {
-        ESP_LOGI(TAG, "[timer_b] fast tick");
+    // PeriodicTimer -> lambda without capture
+    esp_cxx::PeriodicTimer fast_periodic(500000, []() {
+        ESP_LOGI(TAG, "[fast_periodic] fast tick");
     });
 
-    // ── Ejemplo 3: función libre ──────────────────────────────────────────────
-    auto on_slow_tick = []() {
-        ESP_LOGI(TAG, "[timer_c] slow tick");
-    };
-    esp_cxx::PeriodicTimer timer_c(2'000'000, on_slow_tick);
+    // OneShotTimer -> it fires only once
+    esp_cxx::OneShotTimer one_shot(3000000, []() {
+        ESP_LOGI(TAG, "[one_shot] fired after 3 seconds");
+    });
 
-    // ── Iniciar ───────────────────────────────────────────────────────────────
-    timer_a.start();
-    timer_b.start();
-    timer_c.start();
+    // START
+    periodic.start();
+    fast_periodic.start();
+    one_shot.start();
+
+    ESP_LOGI(TAG, "all timers started");
 
     vTaskDelay(pdMS_TO_TICKS(5000));
 
-    // ── Parar manualmente ─────────────────────────────────────────────────────
-    timer_a.stop();
-    timer_b.stop();
-    timer_c.stop();
+    // STOP
+    periodic.stop();
+    fast_periodic.stop();
+    one_shot.stop();
 
-    ESP_LOGI(TAG, "done — tick_count: %d", tick_count);
+    ESP_LOGI(TAG, "done, tick_count: %d", tick_count);
 }
