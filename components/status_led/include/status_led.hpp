@@ -1,11 +1,11 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
+
 #include "esp_err.h"
 #include "driver/rmt_tx.h"
 #include "driver/rmt_encoder.h"
-#include <vector>
-
 #include "driver/gpio.h"
 
 namespace esp_cxx {
@@ -69,7 +69,6 @@ public:
 
     esp_err_t refresh();
 
-
 private:
     gpio_num_t m_gpio;
     uint16_t m_num_leds;
@@ -77,6 +76,5 @@ private:
     rmt_encoder_handle_t   m_encoder = nullptr;
     std::vector<uint8_t>   m_buffer;
     std::vector<uint8_t>   m_zeros;
-
 };
 } // namespace esp_cxx

@@ -1,0 +1,49 @@
+menu "EXAMPLE STATUS LED CONFIGURATION"
+
+    config EXAMPLE_LED_GPIO
+        int "led_gpio"
+        default 10
+        help
+            GPIO number for led
+
+    choice EXAMPLE_LED_TYPE
+        prompt "led_type"
+        default EXAMPLE_LED_TYPE_WS2812
+        help
+            Select the LED type for the example.
+
+        config EXAMPLE_LED_TYPE_SIMPLE
+            bool "SimpleLed"
+            help
+                Simple led.
+
+        config EXAMPLE_LED_TYPE_WS2812
+            bool "Ws2812Led"
+            help
+                RGB LED controlled by ws2812 module.
+    endchoice
+
+    config EXAMPLE_ACTIVE_HIGH
+        bool "active_high"
+        default true
+        depends on EXAMPLE_LED_TYPE_SIMPLE
+        help
+            logic for activating the simple LED.
+
+    config EXAMPLE_NUMBER_OF_LEDS
+        int "number_of_leds"
+        range 1 100
+        default 1
+        depends on EXAMPLE_LED_TYPE_WS2812
+        help
+            Number of WS2812 LEDs.
+
+    config EXAMPLE_BRIGHTNESS
+        range 0 255
+        int "brightness"
+        default 50
+        depends on EXAMPLE_LED_TYPE_WS2812
+        help
+            brightness for WS2812 LEDs.
+
+endmenu
