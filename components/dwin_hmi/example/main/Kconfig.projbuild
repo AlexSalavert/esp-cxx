@@ -1,0 +1,15 @@
+menu "EXAMPLE DWIN HMI CONFIGURATION"
+
+    config EXAMPLE_TX_GPIO
+        int "tx_gpio"
+        default 10
+        help
+            GPIO number for tx uart
+    
+    config EXAMPLE_RX_GPIO
+        int "rx_gpio"
+        default 11
+        help
+            GPIO number for rx uart
+            
+endmenu
