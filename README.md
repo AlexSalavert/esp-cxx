@@ -11,13 +11,14 @@ C++ components for ESP-IDF.
 
 | Component | Description |
 |---|---|
-| [timer](components/timer) | Periodic timer with RAII and lambda support |
+| [timer](components/timer) | ESP timer wrappers with RAII and lambda support: `PeriodicTimer` for recurring callbacks, `OneShotTimer` for one-time callbacks |
+| [status_led](components/status_led) | Status LED abstraction with a common `StatusLed` base class: `SimpleLed` for GPIO-based LEDs, `Ws2812Led` for RMT-based WS2812 strips with per-pixel color control |
 
 ## Usage
 
 Clone as a submodule inside your project's `components/` folder:
 
-    git submodule add https://github.com/tuusuario/esp-cxx components/esp-cxx
+    git submodule add https://github.com/AlexSalavert/esp-cxx components/esp-cxx
 
 Then in your project's `CMakeLists.txt`:
 
