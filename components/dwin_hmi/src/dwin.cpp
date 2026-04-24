@@ -31,7 +31,7 @@ static const char* TAG = "esp_cxx::dwin";
 
 namespace esp_cxx {
 
-Dwin::Dwin(uart_port_t uart_num, gpio_num_t tx_gpio, gpio_num_t rx_gpio, int baudrate)
+Dwin::Dwin(uart_port_t uart_num, gpio_num_t tx_gpio, gpio_num_t rx_gpio, int baudrate, size_t event_queue_size)
     :m_uart_num(uart_num)
 {
     uart_config_t uart_config = {
@@ -58,12 +58,90 @@ Dwin::Dwin(uart_port_t uart_num, gpio_num_t tx_gpio, gpio_num_t rx_gpio, int bau
         ESP_LOGE(TAG, "uart_driver_install failed: %s", esp_err_to_name(err));
         return;
     }
+    m_event_queue = xQueueCreate(event_queue_size, sizeof(DwinEvent));
+    if (!m_event_queue) {
+        ESP_LOGE(TAG, "xQueueCreate failed");
+        uart_driver_delete(uart_num);
+        return;
+    }
+    BaseType_t ret = xTaskCreate(rx_task, "dwin_rx", 4096, this, 5, &m_rx_task);
+    if (ret != pdPASS) {
+        ESP_LOGE(TAG, "xTaskCreate failed");
+        vQueueDelete(m_event_queue);
+        m_event_queue = nullptr;
+        uart_driver_delete(uart_num);
+        return;
+    }
     m_valid = true;
 }
 
 Dwin::~Dwin()
 {
+    if (m_rx_task) {
+        vTaskDelete(m_rx_task);
+        m_rx_task = nullptr;
+    }
+    if (m_event_queue) {
+        vQueueDelete(m_event_queue);
+        m_event_queue = nullptr;
+    }
     uart_driver_delete(m_uart_num);
+}
+
+void Dwin::rx_task(void* arg)
+{
+    Dwin* self = static_cast<Dwin*>(arg);
+    uint8_t buf[128];
+
+    while (true) {
+        int len = uart_read_bytes(self->m_uart_num, buf, sizeof(buf), portMAX_DELAY);
+        if (len >= 7) {
+            self->handle_response(buf, len);
+        }
+    }
+}
+
+void Dwin::handle_response(const uint8_t* buf, size_t len)
+{
+    if (buf[0] != HEAD1 || buf[1] != HEAD2) {
+        ESP_LOGW(TAG, "invalid frame header");
+        return;
+    }
+
+    if (buf[3] != READ) return;
+
+    if (len < 7) return;
+
+    DwinEvent ev{};
+    ev.addr     = (static_cast<uint16_t>(buf[4]) << 8) | buf[5];
+    ev.data_len = buf[6] * 2;
+
+    if (ev.data_len > sizeof(ev.data)) {
+        ESP_LOGW(TAG, "data too long (%u bytes), truncating", ev.data_len);
+        ev.data_len = sizeof(ev.data);
+    }
+
+    memcpy(ev.data, buf + 7, ev.data_len);
+
+    if (xQueueSend(m_event_queue, &ev, 0) != pdTRUE) {
+        ESP_LOGW(TAG, "event queue full, dropping event for addr 0x%04X", ev.addr);
+    }
+}
+
+bool Dwin::event_available() const
+{
+    if (!m_event_queue) return false;
+    return uxQueueMessagesWaiting(m_event_queue) > 0;
+}
+
+esp_err_t Dwin::read_event(DwinEvent& event, TickType_t timeout)
+{
+    if (!m_event_queue) return ESP_ERR_INVALID_STATE;
+
+    if (xQueueReceive(m_event_queue, &event, timeout) == pdTRUE) {
+        return ESP_OK;
+    }
+    return ESP_ERR_TIMEOUT;
 }
 
 esp_err_t Dwin::set_backligth(uint8_t brt)
