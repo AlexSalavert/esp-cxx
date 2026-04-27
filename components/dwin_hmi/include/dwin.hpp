@@ -9,11 +9,11 @@
 
 namespace esp_cxx {
 
-struct DwinEvent {
+typedef struct{
     uint16_t addr;
     uint8_t  data[8];
     uint8_t  data_len;
-};
+} DwinEvent;
 
 
 class Dwin {
@@ -28,15 +28,20 @@ public:
     Dwin(Dwin&&)                 = delete;
     Dwin& operator=(Dwin&&)      = delete;
 
-    esp_err_t set_backligth(uint8_t brt);
-    esp_err_t set_page(uint16_t addr);
-    esp_err_t set_VP(uint16_t addr, int16_t value);
-    esp_err_t set_text(uint16_t addr, const char *text, size_t size);
-
     bool      event_available() const;
     esp_err_t read_event(DwinEvent& event, TickType_t timeout = 0);
 
     bool is_valid() const {return m_valid;}
+
+    esp_err_t reset();
+
+    esp_err_t set_backligth(uint8_t brt);
+    esp_err_t get_backligth();
+    esp_err_t set_page(uint16_t addr);
+    esp_err_t get_page();
+    esp_err_t set_VP(uint16_t addr, int16_t value);
+    esp_err_t get_VP(uint16_t addr);
+    esp_err_t set_text(uint16_t addr, const char *text, size_t size);
 
 private:
     static void rx_task(void *arg);

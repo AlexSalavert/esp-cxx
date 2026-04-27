@@ -8,22 +8,33 @@
 #define WRITE 0x82
 #define READ  0x83
 
-#define MACRO_SET_BACKLIGHT(ACTION, BRIGHTNESS) \
-    {HEAD1, HEAD2, 0x05, ACTION, 0x00, 0x82,\
-    (uint8_t)((BRIGHTNESS) >> 8), 0x00}
+#define MACRO_RESET {HEAD1, HEAD2, 0x07, WRITE, 0x00, 0x04, 0x55, 0xAA, HEAD1, HEAD2}
 
-#define MACRO_SET_PAGE(ACTION, ADDR)                        \
-    {HEAD1, HEAD2, 0x07, ACTION, 0x00, 0x84, 0x5A, 0x01,\
+#define MACRO_SET_PAGE(ADDR)                            \
+    {HEAD1, HEAD2, 0x07, WRITE, 0x00, 0x84, 0x5A, 0x01, \
     (uint8_t)((ADDR) >> 8), (uint8_t)(ADDR)}
 
-#define MACRO_SET_VP(ACTION, ADDR, VP)          \
-    {HEAD1, HEAD2, 0x05, ACTION,                \
-    (uint8_t)((ADDR) >> 8), (uint8_t)(ADDR),\
-    (uint8_t)((VP) >> 8), (uint8_t)(VP)}  \
+#define MACRO_GET_PAGE \
+    {HEAD1, HEAD2, 0x07, READ, 0x00, 0x84, 0x5A, 0x01}
 
-#define MACRO_SET_TEXT(ACTION, ADDR, SIZE)\
-    {HEAD1, HEAD2,                  \
-    (uint8_t)(SIZE), ACTION,        \
+#define MACRO_SET_VP(ADDR, VALUE)              \
+    {HEAD1, HEAD2, 0x05, WRITE,                \
+    (uint8_t)((ADDR) >> 8), (uint8_t)(ADDR),   \
+    (uint8_t)((VALUE) >> 8), (uint8_t)(VALUE)} \
+
+#define MACRO_GET_VP(ADDR)                   \
+    {HEAD1, HEAD2, 0x05, READ,               \
+    (uint8_t)((ADDR) >> 8), (uint8_t)(ADDR), 0x01}     
+
+#define MACRO_SET_BACKLIGHT(BRIGHTNESS)    \
+    {HEAD1, HEAD2, 0x05, WRITE, 0x00, 0x82,\
+    (uint8_t)((BRIGHTNESS) >> 8), 0x00}
+
+#define MACRO_GET_BACKLIGHT \
+    {HEAD1, HEAD2, 0x05, READ, 0x00, 0x82, 0x01}
+
+#define MACRO_SET_TEXT(ADDR, SIZE)         \
+    {HEAD1, HEAD2, (uint8_t)(SIZE), WRITE, \
     (uint8_t)((ADDR) >> 8), (uint8_t)(ADDR)}
 
 
@@ -144,13 +155,35 @@ esp_err_t Dwin::read_event(DwinEvent& event, TickType_t timeout)
     return ESP_ERR_TIMEOUT;
 }
 
+esp_err_t Dwin::reset()
+{
+    if(!m_valid){
+        ESP_LOGE(TAG, "Dwin not initialized");
+        return ESP_ERR_INVALID_STATE;
+    } 
+    const uint8_t reset[10] = MACRO_RESET;
+    uart_write_bytes(m_uart_num, reset, sizeof(reset));
+    return ESP_OK;
+}
+
 esp_err_t Dwin::set_backligth(uint8_t brt)
 {
     if(!m_valid){
         ESP_LOGE(TAG, "Dwin not initialized");
         return ESP_ERR_INVALID_STATE;
     }
-    const uint8_t backlight[8] = MACRO_SET_BACKLIGHT(WRITE, brt);
+    const uint8_t backlight[8] = MACRO_SET_BACKLIGHT(brt);
+    uart_write_bytes(m_uart_num, backlight, sizeof(backlight));
+    return ESP_OK;
+}
+
+esp_err_t Dwin::get_backligth()
+{
+    if(!m_valid){
+        ESP_LOGE(TAG, "Dwin not initialized");
+        return ESP_ERR_INVALID_STATE;
+    }
+    const uint8_t backlight[8] = MACRO_GET_BACKLIGHT;
     uart_write_bytes(m_uart_num, backlight, sizeof(backlight));
     return ESP_OK;
 }
@@ -161,7 +194,18 @@ esp_err_t Dwin::set_page(uint16_t addr)
         ESP_LOGE(TAG, "Dwin not initialized");
         return ESP_ERR_INVALID_STATE;
     }
-    const uint8_t page[10] = MACRO_SET_PAGE(WRITE, addr);
+    const uint8_t page[10] = MACRO_SET_PAGE(addr);
+    uart_write_bytes(m_uart_num, page, sizeof(page));
+    return ESP_OK;
+}
+
+esp_err_t Dwin::get_page()
+{
+    if(!m_valid){
+        ESP_LOGE(TAG, "Dwin not initialized");
+        return ESP_ERR_INVALID_STATE;
+    }
+    const uint8_t page[10] = MACRO_GET_PAGE;
     uart_write_bytes(m_uart_num, page, sizeof(page));
     return ESP_OK;
 }
@@ -172,7 +216,18 @@ esp_err_t Dwin::set_VP(uint16_t addr, int16_t value)
         ESP_LOGE(TAG, "Dwin not initialized");
         return ESP_ERR_INVALID_STATE;
     }
-    const uint8_t vp[8] = MACRO_SET_VP(WRITE, addr, value);
+    const uint8_t vp[8] = MACRO_SET_VP(addr, value);
+    uart_write_bytes(m_uart_num, vp, sizeof(vp));
+    return ESP_OK;
+}
+
+esp_err_t Dwin::get_VP(uint16_t addr)
+{
+    if(!m_valid){
+        ESP_LOGE(TAG, "Dwin not initialized");
+        return ESP_ERR_INVALID_STATE;
+    }
+    const uint8_t vp[8] = MACRO_GET_VP(addr);
     uart_write_bytes(m_uart_num, vp, sizeof(vp));
     return ESP_OK;
 }
@@ -184,7 +239,7 @@ esp_err_t Dwin::set_text(uint16_t addr, const char *text, size_t size)
         return ESP_ERR_INVALID_STATE;
     }
     std::string text_to_send(text, size);
-    const uint8_t prefix_text[6] = MACRO_SET_TEXT(WRITE, addr, size + 3);
+    const uint8_t prefix_text[6] = MACRO_SET_TEXT(addr, size + 3);
     uart_write_bytes(m_uart_num, prefix_text, sizeof(prefix_text));
     uart_write_bytes(m_uart_num, text_to_send.c_str(), text_to_send.size() + 1);
     return ESP_OK;
