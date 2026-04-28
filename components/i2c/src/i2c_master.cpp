@@ -3,22 +3,19 @@
 
 static const char *TAG = "esp_cxx::I2cMaster";
 namespace esp_cxx {
-I2cMaster::I2cMaster(i2c_port_num_t port,
-            gpio_num_t sda,
-            gpio_num_t scl,
-            bool enable_internal_pullup,
-            uint8_t glitch_ignore_cnt)
+I2cMaster::I2cMaster(Config config)
+    : m_timeout_ms(config.timeout_ms)
     {
         i2c_master_bus_config_t bus_cfg = {
-            .i2c_port = port,
-            .sda_io_num = sda,
-            .scl_io_num = scl,
+            .i2c_port = config.port,
+            .sda_io_num = config.sda,
+            .scl_io_num = config.scl,
             .clk_source = I2C_CLK_SRC_DEFAULT,
-            .glitch_ignore_cnt = glitch_ignore_cnt,
+            .glitch_ignore_cnt = config.glitch_ignore_cnt,
             .intr_priority = 0,
             .trans_queue_depth = 0,
             .flags = {
-                .enable_internal_pullup = enable_internal_pullup,
+                .enable_internal_pullup = config.enable_pullup,
                 .allow_pd = 0,
             },
         };
@@ -27,7 +24,6 @@ I2cMaster::I2cMaster(i2c_port_num_t port,
         if (err != ESP_OK) {
             ESP_LOGE(TAG, "i2c_new_master_bus failed: %s", esp_err_to_name(err));
             m_bus_handle = nullptr;
-            return;
         }
     }
 
@@ -41,12 +37,21 @@ I2cMaster::~I2cMaster()
     m_bus_handle = nullptr;
 }
 
-esp_err_t I2cMaster::probe(uint16_t address, uint32_t timeout_ms) const
+esp_err_t I2cMaster::reset()
 {
     if (!m_bus_handle) {
         ESP_LOGE(TAG, "bus not initialized");
         return ESP_ERR_INVALID_STATE;
     } 
-    return i2c_master_probe(m_bus_handle, address, timeout_ms);
+    return i2c_master_bus_reset(m_bus_handle);
+}
+
+esp_err_t I2cMaster::probe(uint16_t address) const
+{
+    if (!m_bus_handle) {
+        ESP_LOGE(TAG, "bus not initialized");
+        return ESP_ERR_INVALID_STATE;
+    } 
+    return i2c_master_probe(m_bus_handle, address, m_timeout_ms);
 }
 } // namespace esp_cxx
