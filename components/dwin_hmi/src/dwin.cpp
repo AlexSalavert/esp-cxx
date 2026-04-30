@@ -8,14 +8,15 @@
 #define WRITE 0x82
 #define READ  0x83
 
+#define ADDR_GET_PAGE       0x0014
+#define ADDR_GET_BACKLIGHT  0x0031
+
+
 #define MACRO_RESET {HEAD1, HEAD2, 0x07, WRITE, 0x00, 0x04, 0x55, 0xAA, HEAD1, HEAD2}
 
 #define MACRO_SET_PAGE(ADDR)                            \
     {HEAD1, HEAD2, 0x07, WRITE, 0x00, 0x84, 0x5A, 0x01, \
     (uint8_t)((ADDR) >> 8), (uint8_t)(ADDR)}
-
-#define MACRO_GET_PAGE \
-    {HEAD1, HEAD2, 0x07, READ, 0x00, 0x84, 0x5A, 0x01}
 
 #define MACRO_SET_VP(ADDR, VALUE)              \
     {HEAD1, HEAD2, 0x05, WRITE,                \
@@ -23,15 +24,12 @@
     (uint8_t)((VALUE) >> 8), (uint8_t)(VALUE)} \
 
 #define MACRO_GET_VP(ADDR)                   \
-    {HEAD1, HEAD2, 0x05, READ,               \
+    {HEAD1, HEAD2, 0x04, READ,               \
     (uint8_t)((ADDR) >> 8), (uint8_t)(ADDR), 0x01}     
 
 #define MACRO_SET_BACKLIGHT(BRIGHTNESS)    \
     {HEAD1, HEAD2, 0x05, WRITE, 0x00, 0x82,\
-    (uint8_t)((BRIGHTNESS) >> 8), 0x00}
-
-#define MACRO_GET_BACKLIGHT \
-    {HEAD1, HEAD2, 0x05, READ, 0x00, 0x82, 0x01}
+    (uint8_t)(BRIGHTNESS), 0x00}
 
 #define MACRO_SET_TEXT(ADDR, SIZE)         \
     {HEAD1, HEAD2, (uint8_t)(SIZE), WRITE, \
@@ -64,7 +62,7 @@ Dwin::Dwin(uart_port_t uart_num, gpio_num_t tx_gpio, gpio_num_t rx_gpio, int bau
         ESP_LOGE(TAG, "uart_set_pin failed: %s", esp_err_to_name(err));
         return;
     }
-    err = uart_driver_install(uart_num, 2048, 0, 0, NULL, 0);
+    err = uart_driver_install(uart_num, 2048, 2048, 0, NULL, 0);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "uart_driver_install failed: %s", esp_err_to_name(err));
         return;
@@ -103,12 +101,17 @@ void Dwin::rx_task(void* arg)
 {
     Dwin* self = static_cast<Dwin*>(arg);
     uint8_t buf[128];
-
     while (true) {
-        int len = uart_read_bytes(self->m_uart_num, buf, sizeof(buf), portMAX_DELAY);
-        if (len >= 7) {
+        int len = uart_read_bytes(self->m_uart_num, buf, sizeof(buf), pdMS_TO_TICKS(20));
+        if(len >= 7){
+            ESP_LOGW(TAG, "uart_data_receive: %d bytes", len);
+            ESP_LOG_BUFFER_HEX_LEVEL(TAG, buf, len, ESP_LOG_WARN);
             self->handle_response(buf, len);
+        } else if(len == 6){
+            ESP_LOGW(TAG, "uart_recived_check: %d bytes", len);
+            ESP_LOG_BUFFER_HEX_LEVEL(TAG, buf, len, ESP_LOG_WARN);
         }
+
     }
 }
 
@@ -121,18 +124,10 @@ void Dwin::handle_response(const uint8_t* buf, size_t len)
 
     if (buf[3] != READ) return;
 
-    if (len < 7) return;
-
     DwinEvent ev{};
-    ev.addr     = (static_cast<uint16_t>(buf[4]) << 8) | buf[5];
-    ev.data_len = buf[6] * 2;
+    ev.addr = (static_cast<uint16_t>(buf[4]) << 8) | buf[5];
 
-    if (ev.data_len > sizeof(ev.data)) {
-        ESP_LOGW(TAG, "data too long (%u bytes), truncating", ev.data_len);
-        ev.data_len = sizeof(ev.data);
-    }
-
-    memcpy(ev.data, buf + 7, ev.data_len);
+    ev.data = (static_cast<uint16_t>(buf[7]) << 8) | buf[8];
 
     if (xQueueSend(m_event_queue, &ev, 0) != pdTRUE) {
         ESP_LOGW(TAG, "event queue full, dropping event for addr 0x%04X", ev.addr);
@@ -183,7 +178,7 @@ esp_err_t Dwin::get_backligth()
         ESP_LOGE(TAG, "Dwin not initialized");
         return ESP_ERR_INVALID_STATE;
     }
-    const uint8_t backlight[8] = MACRO_GET_BACKLIGHT;
+    const uint8_t backlight[7] = MACRO_GET_VP(ADDR_GET_BACKLIGHT);
     uart_write_bytes(m_uart_num, backlight, sizeof(backlight));
     return ESP_OK;
 }
@@ -205,7 +200,7 @@ esp_err_t Dwin::get_page()
         ESP_LOGE(TAG, "Dwin not initialized");
         return ESP_ERR_INVALID_STATE;
     }
-    const uint8_t page[10] = MACRO_GET_PAGE;
+    const uint8_t page[7] = MACRO_GET_VP(ADDR_GET_PAGE);
     uart_write_bytes(m_uart_num, page, sizeof(page));
     return ESP_OK;
 }
@@ -227,7 +222,7 @@ esp_err_t Dwin::get_VP(uint16_t addr)
         ESP_LOGE(TAG, "Dwin not initialized");
         return ESP_ERR_INVALID_STATE;
     }
-    const uint8_t vp[8] = MACRO_GET_VP(addr);
+    const uint8_t vp[7] = MACRO_GET_VP(addr);
     uart_write_bytes(m_uart_num, vp, sizeof(vp));
     return ESP_OK;
 }
@@ -241,7 +236,8 @@ esp_err_t Dwin::set_text(uint16_t addr, const char *text, size_t size)
     std::string text_to_send(text, size);
     const uint8_t prefix_text[6] = MACRO_SET_TEXT(addr, size + 3);
     uart_write_bytes(m_uart_num, prefix_text, sizeof(prefix_text));
-    uart_write_bytes(m_uart_num, text_to_send.c_str(), text_to_send.size() + 1);
+    uart_write_bytes(m_uart_num, text_to_send.c_str(), text_to_send.size());
+
     return ESP_OK;
 }
 

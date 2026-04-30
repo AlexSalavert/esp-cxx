@@ -1,15 +1,40 @@
 menu "EXAMPLE DWIN HMI CONFIGURATION"
 
-    config EXAMPLE_TX_GPIO
-        int "tx_gpio"
+    config EXAMPLE_UART_PORT
+        int "uart_port"
+        default 1
+        help
+            Port for uart
+
+    config EXAMPLE_UART_TX_GPIO
+        int "uart_tx_gpio"
         default 10
         help
-            GPIO number for tx uart
+            GPIO number for tx uart.
     
-    config EXAMPLE_RX_GPIO
-        int "rx_gpio"
+    config EXAMPLE_UART_RX_GPIO
+        int "uart_rx_gpio"
         default 11
         help
-            GPIO number for rx uart
+            GPIO number for rx uart.
+
+    config EXAMPLE_UART_BAUDRATE
+        int "uart_baudrate"
+        default 115200
+        help 
+            Baudrate for uart.
+    
+    config EXAMPLE_TEST_VP_ADDR
+        int "test_vp_addr"
+        default 0
+        help
+            16-bit address for the vp variable configured in dwin by the user.
+
+    config EXAMPLE_TEST_PAGE_ADDR
+        int "test_page_addr"
+        default 0
+        help
+            16-bit address for the vp variable configured in dwin by the user.
+
             
 endmenu

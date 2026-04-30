@@ -11,10 +11,8 @@ namespace esp_cxx {
 
 typedef struct{
     uint16_t addr;
-    uint8_t  data[8];
-    uint8_t  data_len;
+    uint16_t data;
 } DwinEvent;
-
 
 class Dwin {
 public:
