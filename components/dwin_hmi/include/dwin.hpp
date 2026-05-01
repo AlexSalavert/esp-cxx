@@ -6,6 +6,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
+#include "freertos/semphr.h"
 #include <atomic>
 
 namespace esp_cxx {
@@ -62,6 +63,7 @@ private:
     QueueHandle_t m_event_queue    = nullptr;
     QueueHandle_t m_ack_queue      = nullptr;
     QueueHandle_t m_response_queue = nullptr;
+    SemaphoreHandle_t m_mutex      = nullptr;
     TaskHandle_t  m_rx_task        = nullptr;
     bool          m_valid          = false;
 

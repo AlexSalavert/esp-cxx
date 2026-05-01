@@ -90,15 +90,30 @@ Dwin::Dwin(Config config)
         return;
     }
 
-    BaseType_t ret = xTaskCreate(rx_task, "dwin_rx", 4096, this, 5, &m_rx_task);
-    if (ret != pdPASS) {
-        ESP_LOGE(TAG, "xTaskCreate failed");
+    m_mutex = xSemaphoreCreateMutex();
+    if(!m_mutex){
+        ESP_LOGE(TAG, "xSemaphoreCreateMutex failed");
+        uart_driver_delete(config.uart_num);
         vQueueDelete(m_event_queue);
         vQueueDelete(m_ack_queue);
         vQueueDelete(m_response_queue);
         m_event_queue = nullptr;
         m_ack_queue = nullptr;
         m_response_queue = nullptr;
+        return;
+    }
+
+    BaseType_t ret = xTaskCreate(rx_task, "dwin_rx", 4096, this, 5, &m_rx_task);
+    if (ret != pdPASS) {
+        ESP_LOGE(TAG, "xTaskCreate failed");
+        vQueueDelete(m_event_queue);
+        vQueueDelete(m_ack_queue);
+        vQueueDelete(m_response_queue);
+        vSemaphoreDelete(m_mutex);
+        m_event_queue = nullptr;
+        m_ack_queue = nullptr;
+        m_response_queue = nullptr;
+        m_mutex = nullptr;
         uart_driver_delete(config.uart_num);
         return;
     }
@@ -122,6 +137,10 @@ Dwin::~Dwin()
     if (m_response_queue) {
         vQueueDelete(m_response_queue);
         m_response_queue = nullptr;
+    }
+    if (m_mutex) {
+        vSemaphoreDelete(m_mutex);
+        m_mutex = nullptr;
     }
     uart_driver_delete(m_uart_num);
 }
@@ -189,10 +208,13 @@ esp_err_t Dwin::read_event(DwinEvent *event)
 esp_err_t Dwin::set_send_and_wait_ack(const uint8_t* buf, size_t len)
 {
     uint8_t ack[6];
+    xSemaphoreTake(m_mutex, portMAX_DELAY);
     uart_write_bytes(m_uart_num, buf, len);
     if (xQueueReceive(m_ack_queue, ack, m_timeout) != pdTRUE) {
+        xSemaphoreGive(m_mutex);
         return ESP_ERR_TIMEOUT;
     }
+    xSemaphoreGive(m_mutex);
     if (ack[0] != HEAD1 || ack[1] != HEAD2) {
         ESP_LOGW(TAG, "invalid ACK frame");
         return ESP_ERR_INVALID_RESPONSE;
@@ -202,15 +224,17 @@ esp_err_t Dwin::set_send_and_wait_ack(const uint8_t* buf, size_t len)
 
 esp_err_t Dwin::get_send_and_wait_response(uint16_t addr, const uint8_t* buf, size_t len, DwinEvent *out)
 {
+    xSemaphoreTake(m_mutex, portMAX_DELAY);
     m_pending_addr.store(addr);
     uart_write_bytes(m_uart_num, buf, len);
     if(xQueueReceive(m_response_queue, out, m_timeout) != pdTRUE){
         m_pending_addr.store(-1);
+        xSemaphoreGive(m_mutex);
         return ESP_ERR_TIMEOUT;
     }
     m_pending_addr.store(-1);
+    xSemaphoreGive(m_mutex);
     return ESP_OK;
-
 }
 
 esp_err_t Dwin::reset()
