@@ -1,0 +1,101 @@
+menu "EXAMPLE DWIN HMI CONFIGURATION"
+
+    config EXAMPLE_UART_NUM
+        int "uart num"
+        default 1
+        help
+            Port for uart
+
+    config EXAMPLE_UART_TX_GPIO
+        int "uart tx gpio"
+        default 10
+        help
+            GPIO number for tx uart.
+    
+    config EXAMPLE_UART_RX_GPIO
+        int "uart rx gpio"
+        default 11
+        help
+            GPIO number for rx uart.
+
+    config EXAMPLE_UART_BAUDRATE
+        int "uart baudrate"
+        default 115200
+        help 
+            Baudrate for uart.
+
+    config EXAMPLE_ACTIVATE_EVENTS_TEST
+        bool "activate events test"
+        default 1
+        help
+            Activate events if dwin is configured to send events (touch functions)
+
+    config EXAMPLE_ACTIVATE_PAGE_TEST
+        bool "activate page test"
+        default 1
+        help
+            activate set and get page test
+
+    config EXAMPLE_TEST_PAGE_ADDR
+        int "test page addr"
+        default 0
+        depends on EXAMPLE_ACTIVATE_PAGE_TEST
+        help
+            16-bit address for the page configured in dwin by the user.
+
+    config EXAMPLE_ACTIVATE_VP_TEST
+        bool "activate vp test"
+        default 1
+        help
+            Activate set and get vp test
+
+    config EXAMPLE_TEST_VP_ADDR
+        int "test vp addr"
+        default 0
+        depends on EXAMPLE_ACTIVATE_VP_TEST
+        help
+            16-bit address for the vp variable configured in dwin by the user.
+
+    config EXAMPLE_TEST_VP_VALUE
+        int "test vp value"
+        default 0
+        depends on EXAMPLE_ACTIVATE_VP_TEST
+        help
+            16-bit value for the vp variable configured in dwin by the user.
+
+    config EXAMPLE_ACTIVATE_TEXT_TEST
+        bool "activate text test"
+        default 1
+        help
+            activate set text test
+
+    config EXAMPLE_TEST_TEXT_ADDR
+        int "test text addr"
+        default 0
+        depends on EXAMPLE_ACTIVATE_TEXT_TEST
+        help
+            16-bit address for text configured in dwin by the user.
+
+    config EXAMPLE_TEST_TEXT_VALUE
+        string "test text value"
+        default "hello"
+        depends on EXAMPLE_ACTIVATE_TEXT_TEST
+        help
+            text value for the text variable configured in dwin by the user.
+
+    config EXAMPLE_ACTIVATE_BACKLIGTH_TEST
+        bool "activate backligth test"
+        default 1
+        help
+            activate set and get backligth test
+
+    config EXAMPLE_TEST_BACKLIGTH_VALUE
+        int "test backligth value"
+        range 0 100
+        default 100
+        depends on EXAMPLE_ACTIVATE_BACKLIGTH_TEST
+        help
+            0 to 100 value for backligth
+        
+            
+endmenu
