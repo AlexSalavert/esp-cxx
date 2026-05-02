@@ -66,20 +66,27 @@ menu "EXAMPLE I2C CONFIGURATION"
         default 0 
         depends on EXAMPLE_ACTIVATE_I2C_DEVICE_WRITE_TEST
         help
-            Register i2c used for write example.
+            Register byte i2c used for write master example.
 
     config EXAMPLE_I2C_MASTER_DATA_WRITE
         int "i2c master data write"
         default 0 
         depends on EXAMPLE_ACTIVATE_I2C_DEVICE_WRITE_TEST
         help
-            Data for i2c protocol.
+            Data byte i2c used for write master example.
 
     config EXAMPLE_I2C_MASTER_REGISTER_READ
         int "i2c master register read"
         default 0
         depends on EXAMPLE_ACTIVATE_I2C_DEVICE_READ_TEST
         help
-            Register i2c used for read example.
+            Register byte i2c used for read master example.
+
+    config EXAMPLE_I2C_SLAVE_DATA
+        int "i2c slave data"
+        default 0
+        depends on EXAMPLE_I2C_SLAVE
+        help
+            Data byte the slave will send when the master requests a read.
 
 endmenu

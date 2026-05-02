@@ -64,6 +64,8 @@ private:
     int m_timeout_ms = -1;
 };
 
+// NOTE: I2cSlave requires CONFIG_I2C_ENABLE_SLAVE_DRIVER_VERSION_2=y
+// Enable it via: idf.py menuconfig -> Component config -> Driver Configurations -> I2C Configuration
 class I2cSlave{
 public:
     using RequestCallback = std::function<void()>;
@@ -95,6 +97,7 @@ public:
 
     esp_err_t register_callback(Callbacks callbacks);
     esp_err_t write(const uint8_t *data, size_t len);
+    bool is_valid() const { return m_slave_handle != nullptr; }
     
 private:
 
