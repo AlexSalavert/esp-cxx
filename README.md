@@ -14,6 +14,7 @@ C++ components for ESP-IDF.
 | [timer](components/timer) | ESP timer wrappers with RAII and lambda support: `PeriodicTimer` for recurring callbacks, `OneShotTimer` for one-time callbacks |
 | [status_led](components/status_led) | Status LED abstraction with a common `StatusLed` base class: `SimpleLed` for GPIO-based LEDs, `Ws2812Led` for RMT-based WS2812 strips with per-pixel color control |
 | [dwin_hmi](components/dwin_hmi) | UART driver for Dwin/DGUS HMI displays: SET commands with ACK, GET commands returning data directly, and a separate event queue for touch events |
+| [i2c](components/i2c) | I2C driver wrapping the ESP-IDF v5 API: `I2cMaster` manages the bus, `I2cDevice` provides `write()`, `read()` and `write_read()`, `I2cSlave` uses ISR callbacks for master read/write events |
 
 ## Usage
 
