@@ -26,13 +26,13 @@ menu "EXAMPLE DWIN HMI CONFIGURATION"
 
     config EXAMPLE_ACTIVATE_EVENTS_TEST
         bool "activate events test"
-        default 1
+        default y
         help
             Activate events if dwin is configured to send events (touch functions)
 
     config EXAMPLE_ACTIVATE_PAGE_TEST
         bool "activate page test"
-        default 1
+        default y
         help
             activate set and get page test
 
@@ -45,7 +45,7 @@ menu "EXAMPLE DWIN HMI CONFIGURATION"
 
     config EXAMPLE_ACTIVATE_VP_TEST
         bool "activate vp test"
-        default 1
+        default y
         help
             Activate set and get vp test
 
@@ -65,7 +65,7 @@ menu "EXAMPLE DWIN HMI CONFIGURATION"
 
     config EXAMPLE_ACTIVATE_TEXT_TEST
         bool "activate text test"
-        default 1
+        default y
         help
             activate set text test
 
@@ -85,7 +85,7 @@ menu "EXAMPLE DWIN HMI CONFIGURATION"
 
     config EXAMPLE_ACTIVATE_BACKLIGTH_TEST
         bool "activate backligth test"
-        default 1
+        default y
         help
             activate set and get backligth test
 

@@ -7,10 +7,6 @@ namespace esp_cxx {
 I2cSlave::I2cSlave(const Config config)
     : m_timeout_ms(config.timeout_ms)
 {
-    #ifndef CONFIG_I2C_ENABLE_SLAVE_DRIVER_VERSION_2
-        ESP_LOGE(TAG, "CONFIG_I2C_ENABLE_SLAVE_DRIVER_VERSION_2 is not enabled. Enable it via idf.py menuconfig.");
-        return;
-    #endif
     const i2c_slave_config_t slave_cfg = {
         .i2c_port = config.port,
         .sda_io_num = config.sda,
