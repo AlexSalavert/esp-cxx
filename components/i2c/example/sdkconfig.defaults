@@ -1,0 +1,4 @@
+# This file was generated using idf.py save-defconfig. It can be edited manually.
+# Espressif IoT Development Framework (ESP-IDF) 5.5.4 Project Minimal Configuration
+#
+CONFIG_I2C_ENABLE_SLAVE_DRIVER_VERSION_2=y
