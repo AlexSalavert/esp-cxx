@@ -67,6 +67,50 @@ public:
         IirFilter    filter  = IirFilter::X16;
         Mode         mode    = Mode::NORMAL;
         Standby      standby = Standby::MS_1000;
+
+        static Config weatherMonitoring() {
+            return {
+                .osrs_t  = Oversampling::X1,
+                .osrs_p  = Oversampling::X1,
+                .osrs_h  = Oversampling::X1,
+                .filter  = IirFilter::OFF,
+                .mode    = Mode::NORMAL,
+                .standby = Standby::MS_1000,
+            };
+        }
+
+        static Config indoorNavigation() {
+            return {
+                .osrs_t  = Oversampling::X2,
+                .osrs_p  = Oversampling::X16,
+                .osrs_h  = Oversampling::X1,
+                .filter  = IirFilter::X16,
+                .mode    = Mode::NORMAL,
+                .standby = Standby::MS_0_5,
+            };
+        }
+
+        static Config lowPowerForced() {
+            return {
+                .osrs_t  = Oversampling::X1,
+                .osrs_p  = Oversampling::X1,
+                .osrs_h  = Oversampling::X1,
+                .filter  = IirFilter::OFF,
+                .mode    = Mode::SLEEP,
+                .standby = Standby::MS_1000,
+            };
+        }
+
+        static Config highPrecision() {
+            return {
+                .osrs_t  = Oversampling::X16,
+                .osrs_p  = Oversampling::X16,
+                .osrs_h  = Oversampling::X16,
+                .filter  = IirFilter::X16,
+                .mode    = Mode::NORMAL,
+                .standby = Standby::MS_125,
+            };
+        }
     };
 
     struct Data {
@@ -86,7 +130,7 @@ public:
 
     esp_err_t soft_reset();
 
-    esp_err_t set_config(const Config config);
+    esp_err_t set_config(const Config &config);
     esp_err_t get_config(Config &config);
 
     esp_err_t set_mode(const Mode mode);
@@ -135,31 +179,6 @@ private:
         CalibTemp  t;
         CalibPress p;
         CalibHum   h;
-        /*
-        // Temperature
-        uint16_t dig_T1;
-        int16_t  dig_T2;
-        int16_t  dig_T3;
-
-        // Pressure
-        uint16_t dig_P1;
-        int16_t  dig_P2;
-        int16_t  dig_P3;
-        int16_t  dig_P4;
-        int16_t  dig_P5;
-        int16_t  dig_P6;
-        int16_t  dig_P7;
-        int16_t  dig_P8;
-        int16_t  dig_P9;
-
-        // Humidity(only BME280)
-        uint8_t  dig_H1;
-        int16_t  dig_H2;
-        uint8_t  dig_H3;
-        int16_t  dig_H4;
-        int16_t  dig_H5;
-        int8_t   dig_H6;
-        */
     };
 
     std::optional<I2cDevice> m_dev;
@@ -173,6 +192,7 @@ private:
 
     esp_err_t read_calibration();
 
+    esp_err_t read_raw();
     float compensate_temperature(int32_t adc_t);
     float compensate_pressure(int32_t adc_p) const;
     float compensate_humidity(int32_t adc_h) const;

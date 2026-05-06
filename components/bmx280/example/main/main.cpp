@@ -21,6 +21,8 @@ extern "C" void app_main()
     };
     esp_cxx::I2cMaster i2c_bus(bus_config);
     esp_cxx::Bmx280 sensor(i2c_bus, esp_cxx::BMX280_I2C_ADDR_LOW);
+
+    sensor.set_config(esp_cxx::Bmx280::Config::highPrecision());
     if(sensor.is_valid()){
         ESP_LOGI(TAG, "sensor create OK");
     }else{
@@ -30,9 +32,10 @@ extern "C" void app_main()
         vTaskDelay(pdMS_TO_TICKS(1000));
         float temp = 0.0;
         sensor.read_temperature(temp);
-        ESP_LOGI(TAG, "temperatura = %.2f °C", temp);
         float press = 0.0;
         sensor.read_pressure(press);
-        ESP_LOGI(TAG, "pressure = %.2f PA", press);
+        float hum = 0.0;
+        sensor.read_humidity(hum);
+        ESP_LOGI(TAG, "temp = %.2f °C | press = %.2f hPA | HUM = %.2f %%", temp, press / 100.0f, hum);
     }
 }
