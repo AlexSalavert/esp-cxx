@@ -4,9 +4,35 @@
 #include "freertos/task.h"
 #include <sdkconfig.h>
 
+#define I2C_PORT       (i2c_port_num_t) -1
+#define I2C_SDA_GPIO   (gpio_num_t)     2
+#define I2C_SCL_GPIO   (gpio_num_t)     1
+#define I2C_TIMEOUT_MS (int)            100
 static const char* TAG = "bmx280_example";
 
 extern "C" void app_main()
 {
     ESP_LOGI(TAG, "HELLO WORLD");
+    esp_cxx::I2cMaster::Config bus_config = {
+        .port       = I2C_PORT,
+        .sda        = I2C_SDA_GPIO,
+        .scl        = I2C_SCL_GPIO,
+        .timeout_ms = I2C_TIMEOUT_MS,
+    };
+    esp_cxx::I2cMaster i2c_bus(bus_config);
+    esp_cxx::Bmx280 sensor(i2c_bus, esp_cxx::BMX280_I2C_ADDR_LOW);
+    if(sensor.is_valid()){
+        ESP_LOGI(TAG, "sensor create OK");
+    }else{
+        ESP_LOGE(TAG, "sensor create ERROR");
+    }
+    while(true){
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        float temp = 0.0;
+        sensor.read_temperature(temp);
+        ESP_LOGI(TAG, "temperatura = %.2f °C", temp);
+        float press = 0.0;
+        sensor.read_pressure(press);
+        ESP_LOGI(TAG, "pressure = %.2f PA", press);
+    }
 }
