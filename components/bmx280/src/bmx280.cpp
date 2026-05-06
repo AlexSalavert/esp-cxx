@@ -2,6 +2,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
+#include "math.h"
 
 
 #define REG_CALIB_TEMP_PRESS  (uint8_t)0x88
@@ -78,10 +79,7 @@ Bmx280::Bmx280(const I2cMaster& bus, uint8_t addr)
     }
 
 }
-Bmx280::~Bmx280()
-{
 
-}
 
 esp_err_t Bmx280::set_mode(const Mode mode)
 {
@@ -89,6 +87,29 @@ esp_err_t Bmx280::set_mode(const Mode mode)
         ESP_LOGE(TAG, "Bmx280 not initialized");
         return ESP_ERR_INVALID_STATE;
     }
+    uint8_t ctrl_meas = ((UINT8(m_config.osrs_t) & 0x07) << 5) |
+                        ((UINT8(m_config.osrs_p) & 0x07) << 2) |
+                        (UINT8(mode) & 0x03);
+    esp_err_t err = write_reg(REG_CTRL_MEAS, ctrl_meas);
+    if(err != ESP_OK){
+        ESP_LOGE(TAG, "failed to set mode");
+        return err;
+    }
+    m_config.mode = mode;
+    return ESP_OK;
+}
+
+esp_err_t Bmx280::get_mode(Mode &mode)
+{
+    if(!is_valid()){
+        ESP_LOGE(TAG, "Bmx280 not initialized");
+        return ESP_ERR_INVALID_STATE;
+    }
+    uint8_t ctrl_meas;
+    esp_err_t err = read_reg(REG_CTRL_MEAS, ctrl_meas);
+    if(err != ESP_OK) return err;
+    mode = static_cast<Mode>(ctrl_meas & 0x03);
+    m_config.mode = mode;
     return ESP_OK;
 }
 
@@ -102,8 +123,13 @@ esp_err_t Bmx280::soft_reset()
     vTaskDelay(pdMS_TO_TICKS(100));
     return err;
 }
+
 esp_err_t Bmx280::set_config(const Config &config)
 {
+    if(!is_valid()){
+        ESP_LOGE(TAG, "Bmx280 not initialized");
+        return ESP_ERR_INVALID_STATE;
+    }
     esp_err_t err = write_reg(REG_CTRL_MEAS, 0x00);
     if(err != ESP_OK) return err;
     
@@ -127,7 +153,63 @@ esp_err_t Bmx280::set_config(const Config &config)
                         (UINT8(config.mode) & 0x03);
     err = write_reg(REG_CTRL_MEAS, ctrl_meas);
     if(err != ESP_OK) return err;
+    m_config = config;
+    return ESP_OK;
+}
 
+esp_err_t Bmx280::get_config(Config &config)
+{
+    if(!is_valid()){
+        ESP_LOGE(TAG, "Bmx280 not initialized");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    esp_err_t err;
+
+    if(m_model == Model::BMX280_MODEL_BME280){
+        uint8_t ctrl_hum;
+        err = read_reg(REG_CTRL_HUM, ctrl_hum);
+        if(err != ESP_OK) return err;
+        config.osrs_h = static_cast<Oversampling>(ctrl_hum & 0x07);
+    }else{
+        config.osrs_h = Oversampling::SKIP;
+    }
+
+    uint8_t cfg;
+    err = read_reg(REG_CONFIG, cfg);
+    if(err != ESP_OK) return err;
+    config.standby = static_cast<Standby>(cfg >> 5);
+    config.filter  = static_cast<IirFilter>((cfg >> 2) & 0x07);
+
+    uint8_t ctrl_meas;
+    err = read_reg(REG_CTRL_MEAS, ctrl_meas);
+    if(err != ESP_OK) return err;
+    config.osrs_t = static_cast<Oversampling>(ctrl_meas >> 5);
+    config.osrs_p = static_cast<Oversampling>((ctrl_meas >> 2) & 0x07);
+    config.mode   = static_cast<Mode>(ctrl_meas & 0x03);
+
+    m_config = config;
+    return ESP_OK;
+}
+
+esp_err_t Bmx280::read(Data &data)
+{
+    float temp = 0.0;
+    float press = 0.0;
+    float hum = 0.0;
+
+    esp_err_t err = read_temperature(data.temp);
+    if(err != ESP_OK) return err;
+    
+    err = read_pressure(data.press);
+    if(err != ESP_OK) return err;
+
+    if(m_model == Model::BMX280_MODEL_BME280){
+        err = read_humidity(data.hum);
+        if(err != ESP_OK) return err;
+    }else{
+        data.hum = 0.0;
+    }
     return ESP_OK;
 }
 
@@ -207,6 +289,20 @@ esp_err_t Bmx280::read_humidity(float &hum)
         return ESP_ERR_INVALID_STATE;
     }
     hum = compensate_humidity(adc_h);
+    return ESP_OK;
+}
+
+esp_err_t Bmx280::read_altitude(float &alt, float sea_level_PA)
+{
+    if(!is_valid()){
+        ESP_LOGE(TAG, "Bmx280 not initialized");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    float press;
+    esp_err_t err = read_pressure(press);
+    if(err != ESP_OK)return err;
+    alt = 44330.0 * (1.0 - pow(press / sea_level_PA, 0.1903));
     return ESP_OK;
 }
 

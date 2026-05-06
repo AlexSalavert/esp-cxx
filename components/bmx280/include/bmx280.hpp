@@ -24,40 +24,40 @@ public:
 
     enum class Oversampling : uint8_t {
         SKIP = 0x00, ///< Medida desactivada
-        X1   = 0x01, ///< 16 bit de resolución
+        X1   = 0x01, ///< 16 bit
         X2   = 0x02, ///< 17 bit
         X4   = 0x03, ///< 18 bit
         X8   = 0x04, ///< 19 bit
-        X16  = 0x05, ///< 20 bit — máxima resolución
+        X16  = 0x05, ///< 20 bit — maximum resolution
     };
 
     enum class IirFilter : uint8_t {
-        OFF = 0x00, ///< Sin filtro — mayor ruido, menor latencia
+        OFF = 0x00, ///< No filter — more noise, less latency
         X2  = 0x01,
         X4  = 0x02,
         X8  = 0x03,
-        X16 = 0x04, ///< Máximo suavizado — ideal para indoor
+        X16 = 0x04, ///< Maximum smoothing — ideal for indoors
     };
 
     enum class Mode : uint8_t {
-        SLEEP  = 0x00, ///< Sin medidas, consumo mínimo
-        FORCED = 0x01, ///< Una medida, luego vuelve a SLEEP
-        NORMAL = 0x03, ///< Medidas continuas con standby entre ellas
+        SLEEP  = 0x00, ///< Without measurements, minimal consumption
+        FORCED = 0x01, ///< One measure, then return to SLEEP
+        NORMAL = 0x03, ///< Continuous measurements with standby in between
     };
 
     enum class Standby : uint8_t {
-        MS_0_5  = 0x00, ///< 0.5 ms  — válido en ambos sensores
-        MS_62_5 = 0x01, ///< 62.5 ms — válido en ambos sensores
-        MS_125  = 0x02, ///< 125 ms  — válido en ambos sensores
-        MS_250  = 0x03, ///< 250 ms  — válido en ambos sensores
-        MS_500  = 0x04, ///< 500 ms  — válido en ambos sensores
-        MS_1000 = 0x05, ///< 1000 ms — válido en ambos sensores
+        MS_0_5  = 0x00, ///< 0.5 ms 
+        MS_62_5 = 0x01, ///< 62.5 ms
+        MS_125  = 0x02, ///< 125 ms 
+        MS_250  = 0x03, ///< 250 ms 
+        MS_500  = 0x04, ///< 500 ms 
+        MS_1000 = 0x05, ///< 1000 ms
 
-        BME280_MS_10   = 0x06, ///< 10 ms   — solo BME280
-        BME280_MS_20   = 0x07, ///< 20 ms   — solo BME280
+        BME280_MS_10   = 0x06, ///< 10 ms   — only BME280
+        BME280_MS_20   = 0x07, ///< 20 ms   — only BME280
 
-        BMP280_MS_2000 = 0x06, ///< 2000 ms — solo BMP280
-        BMP280_MS_4000 = 0x07, ///< 4000 ms — solo BMP280
+        BMP280_MS_2000 = 0x06, ///< 2000 ms — only BMP280
+        BMP280_MS_4000 = 0x07, ///< 4000 ms — only BMP280
     };
 
     struct Config {
@@ -120,7 +120,7 @@ public:
     };
 
     explicit Bmx280(const I2cMaster& bus, uint8_t addr);
-    ~Bmx280();
+    ~Bmx280() = default;
 
     // non copyable, non movable
     Bmx280(const Bmx280&)             = delete;
@@ -185,6 +185,7 @@ private:
     Model                    m_model;
     int32_t                  m_t_fine;
     CalibData                m_calib;
+    Config                   m_config;
 
     esp_err_t write_reg(const uint8_t reg, const uint8_t value);
     esp_err_t read_reg(const uint8_t reg, uint8_t &value);
@@ -192,7 +193,6 @@ private:
 
     esp_err_t read_calibration();
 
-    esp_err_t read_raw();
     float compensate_temperature(int32_t adc_t);
     float compensate_pressure(int32_t adc_p) const;
     float compensate_humidity(int32_t adc_h) const;
