@@ -107,8 +107,8 @@ public:
                 .osrs_p  = Oversampling::X16,
                 .osrs_h  = Oversampling::X16,
                 .filter  = IirFilter::X16,
-                .mode    = Mode::NORMAL,
-                .standby = Standby::MS_125,
+                .mode    = Mode::SLEEP,
+                .standby = Standby::MS_1000,
             };
         }
     };
@@ -117,6 +117,7 @@ public:
         float temp;
         float press;
         float hum;
+        float alt;
     };
 
     explicit Bmx280(const I2cMaster& bus, uint8_t addr);
@@ -181,21 +182,35 @@ private:
         CalibHum   h;
     };
 
+    struct RawData {
+        int32_t adc_t;
+        int32_t adc_p;
+        int32_t adc_h;
+        float   temp;
+    };
+
     std::optional<I2cDevice> m_dev;
     Model                    m_model;
     int32_t                  m_t_fine;
     CalibData                m_calib;
     Config                   m_config;
+    float                    m_sea_level_PA = 101325.0f;
 
     esp_err_t write_reg(const uint8_t reg, const uint8_t value);
     esp_err_t read_reg(const uint8_t reg, uint8_t &value);
     esp_err_t read_regs(const uint8_t reg, uint8_t *buf, size_t len);
 
+    bool is_measuring();
+    bool is_update();
     esp_err_t read_calibration();
+
+    esp_err_t read_raw(RawData &raw);
 
     float compensate_temperature(int32_t adc_t);
     float compensate_pressure(int32_t adc_p) const;
     float compensate_humidity(int32_t adc_h) const;
+    float calculate_altitude(float press) const;
+
 
 };
 } // namespace esp_cxx

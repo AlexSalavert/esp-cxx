@@ -20,7 +20,12 @@
 #define REG_TEMPERATURE (uint8_t)0xFA // FA - FC
 #define REG_HUMIDITY    (uint8_t)0xFD // FD - FE
 
-#define RESET_VALUE     (uint8_t)0xB6
+#define RESET_VALUE          (uint8_t)0xB6
+#define STATUS_MEASURING_BIT (uint8_t) 0x08 // bit 3
+#define STATUS_IM_UPDATE_BIT (uint8_t) 0x01 // bit 0
+
+#define STATUS_MEASURING_TIMEOUT (uint16_t)500
+#define STATUS_UPDATE_TIMEOUT   (uint16_t)100
 
 #define FLOAT(value)  (static_cast<float>   (value))
 #define INT64(value)  (static_cast<int64_t> (value))
@@ -80,7 +85,6 @@ Bmx280::Bmx280(const I2cMaster& bus, uint8_t addr)
 
 }
 
-
 esp_err_t Bmx280::set_mode(const Mode mode)
 {
     if(!is_valid()){
@@ -120,7 +124,18 @@ esp_err_t Bmx280::soft_reset()
         return ESP_ERR_INVALID_STATE;
     }
     esp_err_t err = write_reg(REG_RESET, RESET_VALUE);
-    vTaskDelay(pdMS_TO_TICKS(100));
+    if(err != ESP_OK){
+        ESP_LOGE(TAG,"failed in soft reset");
+        return err;
+    }
+
+    uint16_t count_timeout = 0;
+    do{
+        if(count_timeout >= STATUS_UPDATE_TIMEOUT) break;
+        vTaskDelay(pdMS_TO_TICKS(10));
+        count_timeout += 10;
+    }
+    while(is_update());
     return err;
 }
 
@@ -194,21 +209,29 @@ esp_err_t Bmx280::get_config(Config &config)
 
 esp_err_t Bmx280::read(Data &data)
 {
-    float temp = 0.0;
-    float press = 0.0;
-    float hum = 0.0;
+    if(!is_valid()){
+        ESP_LOGE(TAG, "Bmx280 not initialized");
+        return ESP_ERR_INVALID_STATE;
+    }
 
-    esp_err_t err = read_temperature(data.temp);
-    if(err != ESP_OK) return err;
-    
-    err = read_pressure(data.press);
+    RawData raw;
+    esp_err_t err = read_raw(raw);
     if(err != ESP_OK) return err;
 
-    if(m_model == Model::BMX280_MODEL_BME280){
-        err = read_humidity(data.hum);
-        if(err != ESP_OK) return err;
+    data.temp = raw.temp;
+
+    if(raw.adc_p == 0x80000){
+        data.press = 0.0;
+        data.alt = 0.0;
     }else{
+        data.press = compensate_pressure(raw.adc_p);
+        data.alt = calculate_altitude(data.press);
+    }
+
+    if(raw.adc_h == 0x8000){
         data.hum = 0.0;
+    }else{
+        data.hum = compensate_humidity(raw.adc_h);
     }
     return ESP_OK;
 }
@@ -219,20 +242,11 @@ esp_err_t Bmx280::read_temperature(float &temp)
         ESP_LOGE(TAG, "Bmx280 not initialized");
         return ESP_ERR_INVALID_STATE;
     }
-
-    uint8_t buf[3];
-    esp_err_t err = read_regs(REG_TEMPERATURE, buf, sizeof(buf));
+    RawData raw;
+    esp_err_t err = read_raw(raw);
     if(err != ESP_OK) return err;
-
-    int32_t adc_t = (INT32(buf[0]) << 12) |
-                    (INT32(buf[1]) << 4)  |
-                    (INT32(buf[2]) >> 4);
-    if(adc_t == 0x80000){
-        ESP_LOGE(TAG, "temperature measurement was disabled");
-        return ESP_ERR_INVALID_STATE;
-    }
-    temp = compensate_temperature(adc_t);
-    return err;
+    temp = raw.temp;
+    return ESP_OK;
 }
 
 esp_err_t Bmx280::read_pressure(float &press)
@@ -242,22 +256,15 @@ esp_err_t Bmx280::read_pressure(float &press)
         return ESP_ERR_INVALID_STATE;
     }
 
-    float temp;
-    esp_err_t err = read_temperature(temp);
+    RawData raw;
+    esp_err_t err = read_raw(raw);
     if(err != ESP_OK) return err;
 
-    uint8_t buf[3];
-    err = read_regs(REG_PRESSURE, buf, sizeof(buf));
-    if(err != ESP_OK) return err;
-
-    int32_t adc_p = (INT32(buf[0]) << 12) |
-                    (INT32(buf[1]) << 4)  |
-                    (INT32(buf[2]) >> 4);
-    if(adc_p == 0x80000){
+    if(raw.adc_p == 0x80000){
         ESP_LOGE(TAG, "pressure measurement was disabled");
         return ESP_ERR_INVALID_STATE;
     }
-    press = compensate_pressure(adc_p);
+    press = compensate_pressure(raw.adc_p);
 
     return ESP_OK;
 }
@@ -275,20 +282,15 @@ esp_err_t Bmx280::read_humidity(float &hum)
         return ESP_ERR_INVALID_STATE;
     }
 
-    float temp;
-    esp_err_t err = read_temperature(temp);
+    RawData raw;
+    esp_err_t err = read_raw(raw);
     if(err != ESP_OK) return err;
 
-    uint8_t buf[2];
-    err = read_regs(REG_HUMIDITY, buf, sizeof(buf));
-    if(err != ESP_OK) return err;
-
-    int32_t adc_h = INT32((buf[0] << 8) | buf[1]);
-    if(adc_h == 0x80000){
+    if(raw.adc_h == 0x8000){
         ESP_LOGE(TAG, "humidity measurement was disabled");
         return ESP_ERR_INVALID_STATE;
     }
-    hum = compensate_humidity(adc_h);
+    hum = compensate_humidity(raw.adc_h);
     return ESP_OK;
 }
 
@@ -302,7 +304,8 @@ esp_err_t Bmx280::read_altitude(float &alt, float sea_level_PA)
     float press;
     esp_err_t err = read_pressure(press);
     if(err != ESP_OK)return err;
-    alt = 44330.0 * (1.0 - pow(press / sea_level_PA, 0.1903));
+    m_sea_level_PA = sea_level_PA;
+    alt = calculate_altitude(press);
     return ESP_OK;
 }
 
@@ -320,6 +323,26 @@ esp_err_t Bmx280::read_reg(const uint8_t reg, uint8_t &value)
 esp_err_t Bmx280::read_regs(const uint8_t reg, uint8_t *buf, size_t len)
 {
     return m_dev->write_read(&reg, sizeof(reg), buf, len);
+}
+
+bool Bmx280::is_measuring()
+{
+    uint8_t status;
+    if(read_reg(REG_STATUS, status) != ESP_OK){
+        ESP_LOGE(TAG, "failed to read chip status");
+        return false;
+    } 
+    return status & STATUS_MEASURING_BIT;
+}
+
+bool Bmx280::is_update()
+{
+    uint8_t status;
+    if(read_reg(REG_STATUS, status) != ESP_OK){
+        ESP_LOGE(TAG, "failed to read chip status");
+        return false;
+    }
+    return status & STATUS_IM_UPDATE_BIT;
 }
 
 esp_err_t Bmx280::read_calibration()
@@ -359,6 +382,48 @@ esp_err_t Bmx280::read_calibration()
 
     return ESP_OK;
 }
+
+esp_err_t Bmx280::read_raw(RawData &raw)
+{
+    esp_err_t err;
+
+    if(m_config.mode != Mode::NORMAL){
+
+        err = set_mode(Mode::FORCED);
+        if(err != ESP_OK) return err;
+
+        uint16_t count_timeout = 0;
+        do{
+            if(count_timeout >= STATUS_MEASURING_TIMEOUT) break;
+            vTaskDelay(pdMS_TO_TICKS(10));
+            count_timeout += 10;
+        }
+        while(is_measuring());
+    }
+
+    uint8_t buf[8];
+    err = read_regs(REG_PRESSURE, buf, sizeof(buf));
+    if(err != ESP_OK) return err;
+
+    raw.adc_p = (INT32(buf[0]) << 12) | (INT32(buf[1]) << 4) | (INT32(buf[2]) >> 4);
+    raw.adc_t = (INT32(buf[3]) << 12) | (INT32(buf[4]) << 4) | (INT32(buf[5]) >> 4);
+
+    if(m_model == Model::BMX280_MODEL_BME280){
+        raw.adc_h = INT32((buf[6] << 8) | buf[7]);
+    } else {
+        raw.adc_h = 0x8000;
+    }
+
+    if(raw.adc_t == 0x80000){
+        ESP_LOGE(TAG, "measurement was disabled");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    raw.temp = compensate_temperature(raw.adc_t);
+
+    return ESP_OK;
+}
+
 float Bmx280::compensate_temperature(int32_t adc_t)
 {
     int32_t var1 = ((((adc_t >> 3) - (INT32(m_calib.t.dig_1) << 1)))
@@ -423,5 +488,10 @@ float Bmx280::compensate_humidity(int32_t adc_h) const
     v = (v > 419430400) ? 419430400 : v;
 
     return FLOAT(v >> 12) / 1024.0f;
+}
+
+float Bmx280::calculate_altitude(float press) const
+{
+    return 44330.0 * (1.0 - pow(press / m_sea_level_PA, 0.1903));
 }
 } // namespace esp_cxx
