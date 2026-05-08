@@ -294,7 +294,7 @@ esp_err_t Bmx280::read_humidity(float &hum)
     return ESP_OK;
 }
 
-esp_err_t Bmx280::read_altitude(float &alt, float sea_level_PA)
+esp_err_t Bmx280::read_altitude(float &alt)
 {
     if(!is_valid()){
         ESP_LOGE(TAG, "Bmx280 not initialized");
@@ -304,10 +304,10 @@ esp_err_t Bmx280::read_altitude(float &alt, float sea_level_PA)
     float press;
     esp_err_t err = read_pressure(press);
     if(err != ESP_OK)return err;
-    m_sea_level_PA = sea_level_PA;
     alt = calculate_altitude(press);
     return ESP_OK;
 }
+
 
 esp_err_t Bmx280::write_reg(const uint8_t reg, const uint8_t value)
 {

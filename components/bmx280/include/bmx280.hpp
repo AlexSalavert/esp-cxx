@@ -74,7 +74,18 @@ public:
                 .osrs_p  = Oversampling::X1,
                 .osrs_h  = Oversampling::X1,
                 .filter  = IirFilter::OFF,
-                .mode    = Mode::NORMAL,
+                .mode    = Mode::FORCED,
+                .standby = Standby::MS_1000,
+            };
+        }
+
+        static Config humiditySensing() {
+            return {
+                .osrs_t  = Oversampling::X1,
+                .osrs_p  = Oversampling::SKIP,
+                .osrs_h  = Oversampling::X1,
+                .filter  = IirFilter::OFF,
+                .mode    = Mode::FORCED,
                 .standby = Standby::MS_1000,
             };
         }
@@ -90,14 +101,14 @@ public:
             };
         }
 
-        static Config lowPowerForced() {
+        static Config gaming() {
             return {
                 .osrs_t  = Oversampling::X1,
-                .osrs_p  = Oversampling::X1,
-                .osrs_h  = Oversampling::X1,
-                .filter  = IirFilter::OFF,
-                .mode    = Mode::SLEEP,
-                .standby = Standby::MS_1000,
+                .osrs_p  = Oversampling::X4,
+                .osrs_h  = Oversampling::SKIP,
+                .filter  = IirFilter::X16,
+                .mode    = Mode::NORMAL,
+                .standby = Standby::MS_0_5,
             };
         }
 
@@ -107,8 +118,8 @@ public:
                 .osrs_p  = Oversampling::X16,
                 .osrs_h  = Oversampling::X16,
                 .filter  = IirFilter::X16,
-                .mode    = Mode::SLEEP,
-                .standby = Standby::MS_1000,
+                .mode    = Mode::NORMAL,
+                .standby = Standby::MS_500,
             };
         }
     };
@@ -141,7 +152,9 @@ public:
     esp_err_t read_temperature(float &temp);
     esp_err_t read_pressure(float &press);
     esp_err_t read_humidity(float &hum);
-    esp_err_t read_altitude(float &alt, float sea_level_PA = 101325.0f);
+    esp_err_t read_altitude(float &alt);
+
+    void set_sea_level_pressure(float sea_level_PA = 101325.0f) {m_sea_level_PA = sea_level_PA;}
 
     bool is_valid() const { return m_dev.has_value(); }
     Model model() const { return m_model; }
