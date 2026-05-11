@@ -4,10 +4,36 @@
 #include "freertos/task.h"
 #include <sdkconfig.h>
 
-#define I2C_PORT       (i2c_port_num_t) -1
-#define I2C_SDA_GPIO   (gpio_num_t)     2
-#define I2C_SCL_GPIO   (gpio_num_t)     1
-#define I2C_TIMEOUT_MS (int)            100
+#define I2C_PORT       (i2c_port_num_t)CONFIG_EXAMPLE_I2C_PORT
+#define I2C_SDA_GPIO   (gpio_num_t)CONFIG_EXAMPLE_I2C_SDA_GPIO
+#define I2C_SCL_GPIO   (gpio_num_t)CONFIG_EXAMPLE_I2C_SCL_GPIO
+
+#ifdef CONFIG_EXAMPLE_BMX280_ADDRESS_LOW
+    #define BMX280_I2C_ADDRESS    (uint8_t)esp_cxx::BMX280_I2C_ADDR_LOW
+#elif CONFIG_EXAMPLE_BMX280_ADDRESS_HIGH
+    #define BMX280_I2C_ADDRESS    (uint8_t)esp_cxx::BMX280_I2C_ADDR_HIGH
+#endif
+
+#ifdef CONFIG_EXAMPLE_BME280
+    #define HUMIDITY_ENABLE true
+#elif CONFIG_EXAMPLE_BMP280
+    #define HUMIDITY_ENABLE false
+#endif
+
+#ifdef CONFIG_EXAMPLE_WEATHER_MONNITORING
+    #define BMX280_DEFAULT_CONFIG esp_cxx::Bmx280::Config::weatherMonitoring()
+#elif CONFIG_EXAMPLE_HUMIDITY_SENSING
+    #define BMX280_DEFAULT_CONFIG esp_cxx::Bmx280::Config::humiditySensing()
+#elif CONFIG_EXAMPLE_INDOOR_NAVIGATION
+    #define BMX280_DEFAULT_CONFIG esp_cxx::Bmx280::Config::indoorNavigation()
+#elif CONFIG_EXAMPLE_GAMING
+    #define BMX280_DEFAULT_CONFIG esp_cxx::Bmx280::Config::gaming()
+#elif CONFIG_EXAMPLE_HIGH_PRECISSION
+    #define BMX280_DEFAULT_CONFIG esp_cxx::Bmx280::Config::highPrecision()
+#endif
+
+
+
 static const char* TAG = "bmx280_example";
 
 extern "C" void app_main()
@@ -17,10 +43,10 @@ extern "C" void app_main()
         .port       = I2C_PORT,
         .sda        = I2C_SDA_GPIO,
         .scl        = I2C_SCL_GPIO,
-        .timeout_ms = I2C_TIMEOUT_MS,
+        .timeout_ms = 100,
     };
     esp_cxx::I2cMaster i2c_bus(bus_config);
-    esp_cxx::Bmx280 sensor(i2c_bus, esp_cxx::BMX280_I2C_ADDR_LOW);
+    esp_cxx::Bmx280 sensor(i2c_bus, BMX280_I2C_ADDRESS);
 
     if(sensor.is_valid()){
         ESP_LOGI(TAG, "sensor create OK");
@@ -28,7 +54,7 @@ extern "C" void app_main()
         ESP_LOGE(TAG, "sensor create ERROR");
     }
 
-    sensor.set_config(esp_cxx::Bmx280::Config::highPrecision());
+    sensor.set_config(BMX280_DEFAULT_CONFIG);
 
     esp_cxx::Bmx280::Config config;
     sensor.get_config(config);
@@ -52,8 +78,10 @@ extern "C" void app_main()
         ESP_LOGI(TAG,"Temperature = %.2f °C", temp);
         sensor.read_pressure(press);
         ESP_LOGI(TAG,"Pressure    = %.2f hPA ", press / 100.0f);
-        sensor.read_humidity(hum);
-        ESP_LOGI(TAG,"Humidity    = %.2f %%", hum);
+        #if(HUMIDITY_ENABLE)
+            sensor.read_humidity(hum);
+            ESP_LOGI(TAG,"Humidity    = %.2f %%", hum);
+        #endif
         sensor.read_altitude(alt);
         ESP_LOGI(TAG,"Altitude    = %.2f m \n", alt);
 

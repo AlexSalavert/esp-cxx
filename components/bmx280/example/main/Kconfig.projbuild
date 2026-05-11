@@ -1,0 +1,80 @@
+menu "EXAMPLE BMX280 CONFIGURATION"
+
+    config EXAMPLE_I2C_PORT
+        int "i2c port"
+        default -1
+        help
+            port for i2c
+
+    config EXAMPLE_I2C_SDA_GPIO
+        int "i2c sda gpio"
+        default 2
+        help
+            gpio number for sda i2c
+
+    config EXAMPLE_I2C_SCL_GPIO
+        int "i2c scl gpio"
+        default 1
+        help
+            gpio number for sda i2c
+
+    choice EXAMPLE_BMX280_ADDRESS
+        prompt "I2C Slave Address"
+        default BMX280_ADDRESS_LOW
+        help
+            Set the slave address of the sensor.
+        
+        config EXAMPLE_BMX280_ADDRESS_LOW
+            bool "0x76 (SDO LOW)"
+            help
+                SDO LOW.
+
+        config EXAMPLE_BMX280_ADDRESS_HIGH
+            bool "0x77 (SDO HIGH)"
+            help 
+                SDO HIGH.
+    endchoice
+
+    choice EXAMPLE_BMX280_MODEL
+        prompt "bmx280 model"
+        default EXAMPLE_BME280
+        help
+            Bmx280 model of sensor select.
+
+        config EXAMPLE_BME280
+            bool "bme280"
+            help
+                model bme280 whith humidity measuring.
+
+        config EXAMPLE_BMP280
+            bool "bmp280"
+            help
+                model bmp280 whithout humidity measuring.
+    endchoice
+
+    choice EXAMPLE_BMX280_CONFIG
+        prompt "bmx280 config"
+        default EXAMPLE_INDOOR_NAVIGATION
+        help
+            Choose one of the default configurations of the bmx280 driver.
+
+        config EXAMPLE_WEATHER_MONNITORING
+            bool "weather monitoring"
+
+        config EXAMPLE_HUMIDITY_SENSING
+            bool "humidity sensing"
+            depends on EXAMPLE_BME280
+        
+        config EXAMPLE_INDOOR_NAVIGATION
+            bool "indoor navigation"
+        
+        config EXAMPLE_GAMING
+            bool "gaming"
+
+        config EXAMPLE_HIGH_PRECISSION
+            bool "high precision"
+
+    endchoice
+        
+            
+endmenu
