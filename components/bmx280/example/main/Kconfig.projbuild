@@ -58,7 +58,7 @@ menu "EXAMPLE BMX280 CONFIGURATION"
         help
             Choose one of the default configurations of the bmx280 driver.
 
-        config EXAMPLE_WEATHER_MONNITORING
+        config EXAMPLE_WEATHER_MONITORING
             bool "weather monitoring"
 
         config EXAMPLE_HUMIDITY_SENSING
@@ -71,10 +71,14 @@ menu "EXAMPLE BMX280 CONFIGURATION"
         config EXAMPLE_GAMING
             bool "gaming"
 
-        config EXAMPLE_HIGH_PRECISSION
+        config EXAMPLE_HIGH_PRECISION
             bool "high precision"
 
     endchoice
         
-            
+    config EXAMPLE_BMX280_MEASURING_INTERVAL_MS
+        int "measuring interval ms"
+        default 1000
+        help
+            time between measurements.
 endmenu
