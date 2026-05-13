@@ -8,13 +8,9 @@ static constexpr uint8_t BMX280_I2C_ADDR_HIGH = 0x77; ///< SDO → VCC
 
 static constexpr uint8_t BMX280_CHIP_ID_BMP280 = 0x58;
 static constexpr uint8_t BMX280_CHIP_ID_BME280 = 0x60;
+
 class Bmx280{
 public:
-    enum class Addr : uint8_t { 
-        BMX280_ADDR_UNKNOWN = 0,
-        BMX280_ADDR_PRIM    = 0x76, 
-        BMX280_ADDR_SEC     = 0x77 
-    };
 
     enum class Model : uint8_t {
         BMX280_MODEL_UNKNOWN = 0,
@@ -23,41 +19,41 @@ public:
     };
 
     enum class Oversampling : uint8_t {
-        SKIP = 0x00, ///< Medida desactivada
-        X1   = 0x01, ///< 16 bit
-        X2   = 0x02, ///< 17 bit
-        X4   = 0x03, ///< 18 bit
-        X8   = 0x04, ///< 19 bit
-        X16  = 0x05, ///< 20 bit — maximum resolution
+        SKIP = 0x00, // Measurement disabled
+        X1   = 0x01, // 16 bit
+        X2   = 0x02, // 17 bit
+        X4   = 0x03, // 18 bit
+        X8   = 0x04, // 19 bit
+        X16  = 0x05, // 20 bit — maximum resolution
     };
 
     enum class IirFilter : uint8_t {
-        OFF = 0x00, ///< No filter — more noise, less latency
+        OFF = 0x00, // No filter — more noise, less latency
         X2  = 0x01,
         X4  = 0x02,
         X8  = 0x03,
-        X16 = 0x04, ///< Maximum smoothing — ideal for indoors
+        X16 = 0x04, // Maximum smoothing — ideal for indoors
     };
 
     enum class Mode : uint8_t {
-        SLEEP  = 0x00, ///< Without measurements, minimal consumption
-        FORCED = 0x01, ///< One measure, then return to SLEEP
-        NORMAL = 0x03, ///< Continuous measurements with standby in between
+        SLEEP  = 0x00, // Without measurements, minimal consumption
+        FORCED = 0x01, // One measure, then return to SLEEP
+        NORMAL = 0x03, // Continuous measurements with standby in between
     };
 
     enum class Standby : uint8_t {
-        MS_0_5  = 0x00, ///< 0.5 ms 
-        MS_62_5 = 0x01, ///< 62.5 ms
-        MS_125  = 0x02, ///< 125 ms 
-        MS_250  = 0x03, ///< 250 ms 
-        MS_500  = 0x04, ///< 500 ms 
-        MS_1000 = 0x05, ///< 1000 ms
+        MS_0_5  = 0x00, // 0.5 ms 
+        MS_62_5 = 0x01, // 62.5 ms
+        MS_125  = 0x02, // 125 ms 
+        MS_250  = 0x03, // 250 ms 
+        MS_500  = 0x04, // 500 ms 
+        MS_1000 = 0x05, // 1000 ms
 
-        BME280_MS_10   = 0x06, ///< 10 ms   — only BME280
-        BME280_MS_20   = 0x07, ///< 20 ms   — only BME280
+        BME280_MS_10   = 0x06, // 10 ms   — only BME280
+        BME280_MS_20   = 0x07, // 20 ms   — only BME280
 
-        BMP280_MS_2000 = 0x06, ///< 2000 ms — only BMP280
-        BMP280_MS_4000 = 0x07, ///< 4000 ms — only BMP280
+        BMP280_MS_2000 = 0x06, // 2000 ms — only BMP280
+        BMP280_MS_4000 = 0x07, // 4000 ms — only BMP280
     };
 
     struct Config {
@@ -159,7 +155,6 @@ public:
     bool is_valid() const { return m_dev.has_value(); }
     Model model() const { return m_model; }
     
-    
 private:
 
     struct CalibTemp {
@@ -223,7 +218,5 @@ private:
     float compensate_pressure(int32_t adc_p) const;
     float compensate_humidity(int32_t adc_h) const;
     float calculate_altitude(float press) const;
-
-
 };
 } // namespace esp_cxx

@@ -16,13 +16,13 @@
 #define REG_STATUS      (uint8_t)0xF3
 #define REG_CTRL_MEAS   (uint8_t)0xF4
 #define REG_CONFIG      (uint8_t)0xF5
-#define REG_PRESSURE    (uint8_t)0xF7 // F7 - F9
-#define REG_TEMPERATURE (uint8_t)0xFA // FA - FC
-#define REG_HUMIDITY    (uint8_t)0xFD // FD - FE
+#define REG_PRESSURE    (uint8_t)0xF7
+#define REG_TEMPERATURE (uint8_t)0xFA
+#define REG_HUMIDITY    (uint8_t)0xFD
 
-#define RESET_VALUE          (uint8_t)0xB6
-#define STATUS_MEASURING_BIT (uint8_t) 0x08 // bit 3
-#define STATUS_IM_UPDATE_BIT (uint8_t) 0x01 // bit 0
+#define RESET_VALUE          (uint8_t) 0xB6
+#define STATUS_MEASURING_BIT (uint8_t) 0x08
+#define STATUS_IM_UPDATE_BIT (uint8_t) 0x01
 
 #define STATUS_MEASURING_TIMEOUT (uint16_t)500
 #define STATUS_UPDATE_TIMEOUT   (uint16_t)100
@@ -82,7 +82,6 @@ Bmx280::Bmx280(const I2cMaster& bus, uint8_t addr)
         m_dev.reset();
         return;
     }
-
 }
 
 esp_err_t Bmx280::set_mode(const Mode mode)
@@ -179,7 +178,7 @@ esp_err_t Bmx280::get_config(Config &config)
         return ESP_ERR_INVALID_STATE;
     }
 
-    esp_err_t err;
+    esp_err_t err = ESP_OK;
 
     if(m_model == Model::BMX280_MODEL_BME280){
         uint8_t ctrl_hum;
@@ -385,7 +384,7 @@ esp_err_t Bmx280::read_calibration()
 
 esp_err_t Bmx280::read_raw(RawData &raw)
 {
-    esp_err_t err;
+    esp_err_t err = ESP_OK;
 
     if(m_config.mode != Mode::NORMAL){
 
